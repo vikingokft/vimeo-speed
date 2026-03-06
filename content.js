@@ -122,6 +122,20 @@
 
     wrapper.appendChild(overlay);
 
+    // Flash overlay briefly when video starts playing
+    var hasFlashed = false;
+    video.addEventListener('play', function () {
+      if (hasFlashed) return;
+      hasFlashed = true;
+      overlay.classList.add('vg-visible');
+      setTimeout(function () {
+        // Only hide if mouse is not over wrapper
+        if (!wrapper.matches(':hover')) {
+          overlay.classList.remove('vg-visible');
+        }
+      }, 2000);
+    });
+
     // Show on hover over wrapper
     wrapper.addEventListener('mouseenter', function () {
       overlay.classList.add('vg-visible');
