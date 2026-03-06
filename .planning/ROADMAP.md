@@ -26,10 +26,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. An embedded Vimeo player on a third-party site plays at the target speed immediately on load
   3. Speed is re-applied after the Vimeo player resets it (seek, pause, quality change)
   4. Extension loads as a valid Manifest V3 Chrome extension without errors
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 01-01: TBD
+- [ ] 01-01-PLAN.md -- Create extension scaffold and content script with speed injection logic
 
 ### Phase 2: Settings UI and Persistence
 **Goal**: User can configure their preferred speed through a popup and have it persist forever
@@ -53,5 +53,5 @@ Phases execute in numeric order: 1 -> 2
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Speed Injection | 0/? | Not started | - |
+| 1. Core Speed Injection | 0/1 | Not started | - |
 | 2. Settings UI and Persistence | 0/? | Not started | - |
