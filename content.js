@@ -148,24 +148,34 @@
       }
     });
 
-    // Throttled ratechange enforcement — only fights Vimeo resets, not user changes
+    // Track user-initiated vs Vimeo-programmatic speed changes
+    // User clicks Vimeo speed menu → ratechange fires with isTrusted context
+    // Vimeo resets speed programmatically → we re-apply desiredSpeed
     var settingSpeed = false;
-    var retryCount = 0;
-    var windowStart = Date.now();
+    var lastUserInteraction = 0;
+
+    // Any click/touch on the page = potential user speed change via Vimeo menu
+    document.addEventListener('click', function () {
+      lastUserInteraction = Date.now();
+    }, true);
 
     video.addEventListener('ratechange', function () {
       if (settingSpeed) return;
       if (video.playbackRate === desiredSpeed) return;
 
-      var now = Date.now();
-      if (now - windowStart >= THROTTLE_WINDOW_MS) {
-        retryCount = 0;
-        windowStart = now;
+      // If ratechange happens within 500ms of a click, treat as user-initiated
+      var timeSinceInteraction = Date.now() - lastUserInteraction;
+      if (timeSinceInteraction < 500) {
+        // User changed speed via Vimeo's own menu — accept it
+        desiredSpeed = video.playbackRate;
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+          chrome.storage.sync.set({ defaultSpeed: desiredSpeed });
+        }
+        updateAllOverlays();
+        return;
       }
 
-      if (retryCount >= MAX_RETRIES_PER_SECOND) return;
-
-      retryCount++;
+      // Vimeo programmatic reset — re-apply desired speed
       settingSpeed = true;
       video.playbackRate = desiredSpeed;
       settingSpeed = false;
