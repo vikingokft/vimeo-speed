@@ -10,7 +10,7 @@
 
 | File | Purpose | Status |
 |------|---------|--------|
-| `vimeo-gyorsito.zip` | Extension package (upload this) | Ready |
+| `vimeo-speed.zip` | Extension package (upload this) | Ready |
 | `store/description.txt` | Store listing description | Ready |
 | `store/privacy-policy.html` | Privacy policy (host somewhere) | Ready |
 | `store/promo-small-440x280.png` | Small promo tile | Ready |
@@ -28,7 +28,7 @@
 
 1. Go to https://chrome.google.com/webstore/devconsole
 2. Click "New Item"
-3. Upload `vimeo-gyorsito.zip`
+3. Upload `vimeo-speed.zip`
 4. Fill in listing:
    - **Language:** English (or Hungarian)
    - **Description:** Copy from `store/description.txt`

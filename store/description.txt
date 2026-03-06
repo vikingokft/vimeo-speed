@@ -1,6 +1,6 @@
-Vimeo Gyorsito - Automatic Vimeo Video Speed Control
+Vimeo Speed - Automatic Vimeo Video Speed Control
 
-Tired of manually changing the playback speed for every single Vimeo video? Vimeo Gyorsito automatically sets your preferred playback speed on all Vimeo videos — both on vimeo.com and embedded players on any website.
+Tired of manually changing the playback speed for every single Vimeo video? Vimeo Speed automatically sets your preferred playback speed on all Vimeo videos — both on vimeo.com and embedded players on any website.
 
 FEATURES:
 • Set a default playback speed that applies to every Vimeo video automatically

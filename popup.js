@@ -27,7 +27,7 @@
     chrome.storage.sync.set({ defaultSpeed: speed }, function () {
       renderPresets(speed);
       customInput.value = '';
-      statusEl.textContent = speed + 'x beallitva';
+      statusEl.textContent = speed + 'x set';
       updateBadge(speed);
       setTimeout(function () { statusEl.textContent = ''; }, 1500);
     });

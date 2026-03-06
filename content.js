@@ -31,12 +31,17 @@
   }
 
   function updateAllOverlays() {
+    var isPreset = PRESETS.indexOf(desiredSpeed) !== -1;
     document.querySelectorAll('.vg-speed-overlay').forEach(function (overlay) {
       var buttons = overlay.querySelectorAll('.vg-speed-btn');
       buttons.forEach(function (btn) {
         var speed = parseFloat(btn.dataset.speed);
         btn.classList.toggle('vg-active', speed === desiredSpeed);
       });
+      var input = overlay.querySelector('.vg-custom-input');
+      if (input) {
+        input.value = isPreset ? '' : desiredSpeed;
+      }
     });
   }
 
@@ -61,10 +66,11 @@
       '  right: 8px;',
       '  z-index: 99999;',
       '  display: flex;',
-      '  gap: 2px;',
+      '  gap: 4px;',
+      '  align-items: center;',
       '  background: rgba(0,0,0,0.7);',
       '  border-radius: 6px;',
-      '  padding: 3px;',
+      '  padding: 6px 10px;',
       '  opacity: 0;',
       '  transition: opacity 0.2s;',
       '  pointer-events: none;',
@@ -93,6 +99,45 @@
       '  background: rgba(255,255,255,0.25);',
       '  color: #fff;',
       '  font-weight: 700;',
+      '}',
+      '.vg-speed-divider {',
+      '  width: 1px;',
+      '  background: rgba(255,255,255,0.2);',
+      '  margin: 2px 3px;',
+      '}',
+      '.vg-custom-input {',
+      '  width: 36px;',
+      '  background: rgba(255,255,255,0.1);',
+      '  color: #ccc;',
+      '  border: 1px solid rgba(255,255,255,0.2);',
+      '  padding: 3px 4px;',
+      '  font-size: 11px;',
+      '  font-family: -apple-system, system-ui, sans-serif;',
+      '  border-radius: 4px;',
+      '  text-align: center;',
+      '  line-height: 1;',
+      '  outline: none;',
+      '}',
+      '.vg-custom-input:focus {',
+      '  border-color: rgba(255,255,255,0.5);',
+      '  color: #fff;',
+      '}',
+      '.vg-custom-input::placeholder {',
+      '  color: rgba(255,255,255,0.3);',
+      '}',
+      '.vg-custom-apply {',
+      '  background: transparent;',
+      '  color: #ccc;',
+      '  border: none;',
+      '  padding: 3px 2px 3px 0;',
+      '  font-size: 13px;',
+      '  cursor: pointer;',
+      '  border-radius: 4px;',
+      '  line-height: 1;',
+      '}',
+      '.vg-custom-apply:hover {',
+      '  background: rgba(255,255,255,0.15);',
+      '  color: #fff;',
       '}'
     ].join('\n');
 
@@ -120,21 +165,75 @@
       overlay.appendChild(btn);
     });
 
+    // Divider between presets and custom input
+    var divider = document.createElement('div');
+    divider.className = 'vg-speed-divider';
+    overlay.appendChild(divider);
+
+    // Custom speed input
+    var customInput = document.createElement('input');
+    customInput.type = 'text';
+    customInput.className = 'vg-custom-input';
+    customInput.placeholder = '...';
+    customInput.inputMode = 'decimal';
+
+    function applyCustomSpeed() {
+      var raw = customInput.value.replace(',', '.');
+      var val = parseFloat(raw);
+      if (!isNaN(val) && val >= 0.5 && val <= 4) {
+        desiredSpeed = val;
+        video.playbackRate = val;
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+          chrome.storage.sync.set({ defaultSpeed: val });
+        }
+        updateAllOverlays();
+        // Show the applied value in the input (keep it visible)
+        customInput.value = val % 1 === 0 ? val.toString() : val.toString();
+        customInput.blur();
+      }
+    }
+
+    customInput.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    customInput.addEventListener('keydown', function (e) {
+      e.stopPropagation();
+      if (e.key === 'Enter') applyCustomSpeed();
+    });
+    overlay.appendChild(customInput);
+
+    // Apply button (checkmark)
+    var applyBtn = document.createElement('button');
+    applyBtn.className = 'vg-custom-apply';
+    applyBtn.textContent = '\u2713';
+    applyBtn.title = 'Alkalmaz';
+    applyBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      applyCustomSpeed();
+    });
+    overlay.appendChild(applyBtn);
+
     wrapper.appendChild(overlay);
 
     // Flash overlay briefly when video starts playing
     var hasFlashed = false;
-    video.addEventListener('play', function () {
+    function flashOverlay() {
       if (hasFlashed) return;
       hasFlashed = true;
       overlay.classList.add('vg-visible');
       setTimeout(function () {
-        // Only hide if mouse is not over wrapper
         if (!wrapper.matches(':hover')) {
           overlay.classList.remove('vg-visible');
         }
       }, 2000);
-    });
+    }
+    video.addEventListener('play', flashOverlay);
+    // If video is already playing (overlay created after play started), flash now
+    if (!video.paused) {
+      flashOverlay();
+    }
 
     // Show on hover over wrapper
     wrapper.addEventListener('mouseenter', function () {
@@ -167,6 +266,7 @@
     // Vimeo resets speed programmatically → we re-apply desiredSpeed
     var settingSpeed = false;
     var lastUserInteraction = 0;
+    var initTime = Date.now();
 
     // Any click/touch on the page = potential user speed change via Vimeo menu
     document.addEventListener('click', function () {
@@ -177,9 +277,19 @@
       if (settingSpeed) return;
       if (video.playbackRate === desiredSpeed) return;
 
+      // Ignore ratechange in the first 2s after init — Vimeo resets speed on load
+      var timeSinceInit = Date.now() - initTime;
+      if (timeSinceInit < 2000) {
+        settingSpeed = true;
+        video.playbackRate = desiredSpeed;
+        settingSpeed = false;
+        return;
+      }
+
       // If ratechange happens within 500ms of a click, treat as user-initiated
+      // But only if the click was AFTER init (not the navigation click)
       var timeSinceInteraction = Date.now() - lastUserInteraction;
-      if (timeSinceInteraction < 500) {
+      if (timeSinceInteraction < 500 && lastUserInteraction > initTime) {
         // User changed speed via Vimeo's own menu — accept it
         desiredSpeed = video.playbackRate;
         if (typeof chrome !== 'undefined' && chrome.storage) {
