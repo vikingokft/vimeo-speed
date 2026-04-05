@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Vimeo Instant Speed",
-  "version": "1.2.1",
-  "description": "Automatically speed up Vimeo videos",
+  "name": "Vimeo / Bunny Instant Speed",
+  "version": "1.3.0",
+  "description": "Automatically speed up Vimeo and Bunny videos",
   "permissions": ["storage"],
   "action": {
     "default_popup": "popup.html",
@@ -14,7 +14,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://*.vimeo.com/*", "*://player.vimeo.com/*"],
+      "matches": ["*://*.vimeo.com/*", "*://player.vimeo.com/*", "*://*.mediadelivery.net/*", "*://*.bunnycdn.com/*"],
       "js": ["content.js"],
       "all_frames": true,
       "run_at": "document_idle"

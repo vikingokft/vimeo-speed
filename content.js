@@ -9,8 +9,20 @@
   let desiredSpeed = DEFAULT_SPEED;
   const processedVideos = new WeakSet();
 
+  function findAllVideos(root) {
+    var videos = [];
+    root.querySelectorAll('video').forEach(function (v) { videos.push(v); });
+    // Search inside shadow DOMs
+    root.querySelectorAll('*').forEach(function (el) {
+      if (el.shadowRoot) {
+        findAllVideos(el.shadowRoot).forEach(function (v) { videos.push(v); });
+      }
+    });
+    return videos;
+  }
+
   function startObserving() {
-    document.querySelectorAll('video').forEach(initSpeedControl);
+    findAllVideos(document).forEach(initSpeedControl);
 
     var observer = new MutationObserver(function (mutations) {
       for (var i = 0; i < mutations.length; i++) {
@@ -22,9 +34,10 @@
           if (node.nodeName === 'VIDEO') {
             initSpeedControl(node);
           } else if (node.querySelectorAll) {
-            var videos = node.querySelectorAll('video');
-            for (var k = 0; k < videos.length; k++) {
-              initSpeedControl(videos[k]);
+            findAllVideos(node).forEach(initSpeedControl);
+            // If this is a custom element, watch its shadow root too
+            if (node.shadowRoot) {
+              observeShadow(node.shadowRoot);
             }
           }
         }
@@ -35,6 +48,35 @@
       childList: true,
       subtree: true
     });
+
+    // Also poll for shadow DOM videos (some players create them async)
+    var pollCount = 0;
+    var pollInterval = setInterval(function () {
+      var videos = findAllVideos(document);
+      videos.forEach(initSpeedControl);
+      pollCount++;
+      if (videos.length > 0 || pollCount > 20) {
+        clearInterval(pollInterval);
+      }
+    }, 500);
+  }
+
+  function observeShadow(shadowRoot) {
+    var observer = new MutationObserver(function (mutations) {
+      for (var i = 0; i < mutations.length; i++) {
+        var addedNodes = mutations[i].addedNodes;
+        for (var j = 0; j < addedNodes.length; j++) {
+          var node = addedNodes[j];
+          if (node.nodeType !== Node.ELEMENT_NODE) continue;
+          if (node.nodeName === 'VIDEO') {
+            initSpeedControl(node);
+          } else if (node.querySelectorAll) {
+            findAllVideos(node).forEach(initSpeedControl);
+          }
+        }
+      }
+    });
+    observer.observe(shadowRoot, { childList: true, subtree: true });
   }
 
   // Load saved speed from storage, THEN start observing videos
@@ -47,7 +89,7 @@
     chrome.storage.onChanged.addListener(function (changes) {
       if (changes.defaultSpeed) {
         desiredSpeed = changes.defaultSpeed.newValue;
-        document.querySelectorAll('video').forEach(function (v) {
+        findAllVideos(document).forEach(function (v) {
           v.playbackRate = desiredSpeed;
         });
         updateAllOverlays();
@@ -73,7 +115,15 @@
   }
 
   function createOverlay(video) {
-    var wrapper = video.closest('.player_area, .player, [data-player], .video-player') || video.parentElement;
+    // Find the right wrapper — handle shadow DOM
+    var wrapper;
+    var rootNode = video.getRootNode();
+    if (rootNode instanceof ShadowRoot) {
+      // Video is inside shadow DOM — attach overlay to the host element in the main document
+      wrapper = rootNode.host.closest('.player_area, .player, [data-player], .video-player') || rootNode.host;
+    } else {
+      wrapper = video.closest('.player_area, .player, [data-player], .video-player, .plyr, .plyr__video-wrapper, #player') || video.parentElement;
+    }
     if (!wrapper || wrapper.querySelector('.vg-speed-overlay')) return;
 
     // Ensure wrapper is positioned
